@@ -208,3 +208,38 @@ Dans cette simulation, seul le vendeur possède une paire de clés RSA. L'intég
 
 **Pourquoi AES-CBC avec IV aléatoire ?**
 L'IV (vecteur d'initialisation) aléatoire garantit que deux chiffrements du même message donnent des résultats différents, empêchant l'analyse de patterns.
+
+**Pourquoi SHA-1 et pas SHA-256 ?**
+SHA-1 est considéré comme faible depuis 2017 pour les applications de signature à long terme. Ici, il est utilisé à titre pédagogique pour l'intégrité des messages. Dans un vrai système, on utiliserait SHA-256 ou SHA-3.
+
+**Pourquoi `threading.Event()` dans `acheteur.py` ?**
+Le client MQTT de paho tourne dans son propre thread (via `loop_start()`). Pour que le thread principal puisse attendre que le catalogue soit prêt sans faire de boucle active (`while catalogue is None`), on utilise `threading.Event.wait()` qui bloque proprement jusqu'au signal.
+
+---
+
+## Structure des commentaires dans le code
+
+Chaque fichier Python est commenté en détail pour expliquer :
+- **Le "pourquoi"** : raison de chaque choix technique (ex : pourquoi OAEP et pas PKCS1v15 pour le chiffrement RSA)
+- **Le "comment"** : fonctionnement des primitives crypto utilisées (AES-CBC, PKCS7, OAEP, etc.)
+- **Les pièges** : points d'attention comme la compatibilité paho-mqtt v1/v2 ou les attributs UTC des certificats
+
+| Fichier | Ce qui est commenté |
+|---|---|
+| `generate_keys.py` | Génération RSA, format PEM, structure X.509, cert autosigné |
+| `crypto_utils.py` | AES-CBC + IV + PKCS7, RSA OAEP, SHA-1, signature PKCS1v15, vérification X.509 |
+| `vendeur.py` | Gestion multi-sessions, handshake côté serveur, wildcards MQTT |
+| `acheteur.py` | Handshake côté client, synchronisation par événements, saisie utilisateur |
+
+---
+
+## Limites et améliorations possibles
+
+| Limite actuelle | Ce qu'on ferait en production |
+|---|---|
+| Certificat autosigné | Utiliser un CA reconnu (Let's Encrypt, PKI interne) |
+| SHA-1 pour l'intégrité | Passer à SHA-256 ou SHA-3 |
+| Clé AES non persistée | Gérer l'expiration et la rotation des clés de session |
+| Acheteur sans clé privée | Donner à chaque acheteur sa propre paire RSA pour signer ses commandes |
+| Pas d'authentification acheteur | Ajouter un mécanisme d'authentification (login, certificat client) |
+| Port MQTT non chiffré | Activer TLS sur Mosquitto (port 8883) en complément |
